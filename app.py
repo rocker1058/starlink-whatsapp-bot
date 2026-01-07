@@ -16,7 +16,9 @@ def whatsapp():
 
     try:
         # Conectar a Google Sheets
-        gc = gspread.service_account()
+        gc = gspread.service_account(
+            filename="/etc/secrets/credentials.json"
+        )
         sh = gc.open_by_key(SHEET_ID)
         worksheet = sh.worksheet(SHEET_NAME)
 
