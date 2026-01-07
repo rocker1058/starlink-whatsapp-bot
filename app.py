@@ -31,8 +31,8 @@ def whatsapp():
 
     except Exception as e:
         resp.message(
-            f"Error al leer Google Sheets ❌\n"
-            f"{str(e)}"
+            "Error al leer Google Sheets ❌\n"
+            f"{repr(e)}"
         )
 
     return str(resp)
