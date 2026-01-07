@@ -7,7 +7,7 @@ import gspread
 
 app = Flask(__name__)
 
-SHEET_ID = "1XG6HxVpxMD1HP4sIxCRM4EXCLpVYRReEOHYGqRd0tyM"
+SHEET_ID = "1tPN4C4AeKWZzzG7yx-CFwEjJ2a9FQ6ATj4EVySRlKq8"
 SHEET_NAME = "clientes_bot"
 
 @app.route("/whatsapp", methods=["POST"])
