@@ -15,9 +15,14 @@ def whatsapp():
     resp = MessagingResponse()
 
     try:
-        # Conectar a Google Sheets
+        SCOPES = [
+            "https://www.googleapis.com/auth/spreadsheets.readonly",
+            "https://www.googleapis.com/auth/drive.readonly"
+        ]
+
         gc = gspread.service_account(
-            filename="/etc/secrets/credentials.json"
+            filename="/etc/secrets/credentials.json",
+            scopes=SCOPES
         )
         sh = gc.open_by_key(SHEET_ID)
         worksheet = sh.worksheet(SHEET_NAME)
@@ -31,8 +36,7 @@ def whatsapp():
 
     except Exception as e:
         resp.message(
-            "Error al leer Google Sheets ❌\n"
-            f"{repr(e)}"
+            f"Error al leer Google Sheets ❌\n{repr(e)}"
         )
 
     return str(resp)
