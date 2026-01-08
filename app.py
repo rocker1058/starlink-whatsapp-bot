@@ -73,20 +73,30 @@ def whatsapp():
                 resp.message("✅ Hoy no hay pagos pendientes.")
                 return str(resp)
 
-            total = 0
+            total_cobrar = 0
+            total_pagar = 0
             mensaje = "📅 *Pagos de hoy:*\n"
 
             for r in pagos:
-                valor = numero_seguro(r.get("clientepaga"))
-                valor_cop = valor * 1000
-                total += valor_cop
+                cliente_paga = numero_seguro(r.get("clientepaga")) * 1000
+                tu_pagas = numero_seguro(r.get("paga")) * 1000
+                ganancia = cliente_paga - tu_pagas
+                
+                total_cobrar += cliente_paga
+                total_pagar += tu_pagas
 
-                valor_formateado = f"{valor_cop:,}".replace(",", ".")
-                mensaje += f"- {r.get('cliente')} → {valor_formateado} pesos\n"
+                cliente_fmt = f"{cliente_paga:,}".replace(",", ".")
+                ganancia_fmt = f"{ganancia:,}".replace(",", ".")
+                mensaje += f"- {r.get('cliente')} → {cliente_fmt} pesos (ganancia: {ganancia_fmt})\n"
 
-            total_formateado = f"{total:,}".replace(",", ".")
+            total_cobrar_fmt = f"{total_cobrar:,}".replace(",", ".")
+            total_pagar_fmt = f"{total_pagar:,}".replace(",", ".")
+            ganancia_total_fmt = f"{total_cobrar - total_pagar:,}".replace(",", ".")
+            
             mensaje += "\n————————————\n"
-            mensaje += f"💰 *Total del día:* {total_formateado} pesos"
+            mensaje += f"💰 *Total a cobrar:* {total_cobrar_fmt} pesos\n"
+            mensaje += f"💸 *Total a pagar:* {total_pagar_fmt} pesos\n"
+            mensaje += f"🎯 *Ganancia total:* {ganancia_total_fmt} pesos"
 
             resp.message(mensaje)
             return str(resp)
