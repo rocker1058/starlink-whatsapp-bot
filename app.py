@@ -1,37 +1,45 @@
 import os
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "/etc/secrets/credentials.json"
-
-from flask import Flask, request
+from flask import Flask
 from twilio.twiml.messaging_response import MessagingResponse
-import gspread
+
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
 
 app = Flask(__name__)
 
 SHEET_ID = "1tPN4C4AeKWZzzG7yx-CFwEjJ2a9FQ6ATj4EVySRlKq8"
 SHEET_NAME = "clientes_bot"
 
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets.readonly"
+]
+
 @app.route("/whatsapp", methods=["POST"])
 def whatsapp():
     resp = MessagingResponse()
 
     try:
-        SCOPES = [
-            "https://www.googleapis.com/auth/spreadsheets.readonly",
-            "https://www.googleapis.com/auth/drive.readonly"
-        ]
-
-        gc = gspread.service_account(
-            filename="/etc/secrets/credentials.json",
+        credentials = service_account.Credentials.from_service_account_file(
+            "/etc/secrets/credentials.json",
             scopes=SCOPES
         )
-        sh = gc.open_by_key(SHEET_ID)
-        worksheet = sh.worksheet(SHEET_NAME)
 
-        filas = worksheet.get_all_records()
+        service = build("sheets", "v4", credentials=credentials)
+
+        sheet = service.spreadsheets()
+
+        result = sheet.values().get(
+            spreadsheetId=SHEET_ID,
+            range=f"{SHEET_NAME}!A1:Z"
+        ).execute()
+
+        values = result.get("values", [])
+
+        filas = len(values) - 1 if len(values) > 1 else 0
 
         resp.message(
             f"Conectado a Google Sheets ✅\n"
-            f"Filas leídas: {len(filas)}"
+            f"Filas leídas: {filas}"
         )
 
     except Exception as e:
