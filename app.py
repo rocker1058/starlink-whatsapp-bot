@@ -1,5 +1,7 @@
 import os
 from datetime import datetime
+import pytz
+
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
 
@@ -21,6 +23,13 @@ def esta_al_dia(valor):
         return False
     v = str(valor).strip().lower()
     return v in ["si", "true", "1", "yes"]
+
+# ---- FUNCION PARA NUMEROS SEGUROS ----
+def numero_seguro(valor):
+    try:
+        return int(str(valor).strip())
+    except:
+        return 0
 
 @app.route("/whatsapp", methods=["POST"])
 def whatsapp():
@@ -46,14 +55,17 @@ def whatsapp():
         data = rows[1:]
 
         registros = [dict(zip(headers, row)) for row in data]
-        hoy = datetime.now().day
+
+        # ---- ZONA HORARIA COLOMBIA ----
+        tz = pytz.timezone("America/Bogota")
+        hoy = datetime.now(tz).day
 
         # ================= PAGOS HOY =================
         if body == "pagos hoy":
             pagos = [
                 r for r in registros
                 if r.get("vence")
-                and int(r["vence"]) == hoy
+                and numero_seguro(r.get("vence")) == hoy
                 and not esta_al_dia(r.get("aldia"))
             ]
 
@@ -65,7 +77,7 @@ def whatsapp():
             mensaje = "📅 *Pagos de hoy:*\n"
 
             for r in pagos:
-                valor = int(r.get("clientepaga", 0))
+                valor = numero_seguro(r.get("clientepaga"))
                 valor_cop = valor * 1000
                 total += valor_cop
 
@@ -73,7 +85,8 @@ def whatsapp():
                 mensaje += f"- {r.get('cliente')} → {valor_formateado} pesos\n"
 
             total_formateado = f"{total:,}".replace(",", ".")
-            mensaje += f"\n💰 *Total esperado:* {total_formateado} pesos"
+            mensaje += "\n————————————\n"
+            mensaje += f"💰 *Total del día:* {total_formateado} pesos"
 
             resp.message(mensaje)
             return str(resp)
@@ -91,7 +104,7 @@ def whatsapp():
 
             mensaje = "❌ *Clientes con pago pendiente:*\n"
             for r in deudores:
-                valor = int(r.get("clientepaga", 0))
+                valor = numero_seguro(r.get("clientepaga"))
                 valor_cop = valor * 1000
                 valor_formateado = f"{valor_cop:,}".replace(",", ".")
 
