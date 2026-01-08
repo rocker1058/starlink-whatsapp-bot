@@ -103,15 +103,21 @@ def whatsapp():
                 return str(resp)
 
             mensaje = "❌ *Clientes con pago pendiente:*\n"
+
             for r in deudores:
-                valor = numero_seguro(r.get("clientepaga"))
-                valor_cop = valor * 1000
-                valor_formateado = f"{valor_cop:,}".replace(",", ".")
+                cliente_paga = numero_seguro(r.get("clientepaga")) * 1000
+                tu_pagas = numero_seguro(r.get("paga")) * 1000
+                ganancia = cliente_paga - tu_pagas
+
+                cliente_fmt = f"{cliente_paga:,}".replace(",", ".")
+                tu_fmt = f"{tu_pagas:,}".replace(",", ".")
+                ganancia_fmt = f"{ganancia:,}".replace(",", ".")
 
                 mensaje += (
-                    f"- {r.get('cliente')} "
-                    f"(vence día {r.get('vence')}, "
-                    f"{valor_formateado} pesos)\n"
+                    f"- {r.get('cliente')}\n"
+                    f"  Cliente paga: {cliente_fmt} pesos\n"
+                    f"  Tú pagas: {tu_fmt} pesos\n"
+                    f"  Ganancia: {ganancia_fmt} pesos\n"
                 )
 
             resp.message(mensaje)
