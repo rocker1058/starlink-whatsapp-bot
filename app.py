@@ -28,7 +28,6 @@ def whatsapp():
     resp = MessagingResponse()
 
     try:
-        # ---- AUTENTICACION ----
         credentials = service_account.Credentials.from_service_account_file(
             "/etc/secrets/credentials.json",
             scopes=SCOPES
@@ -67,10 +66,15 @@ def whatsapp():
 
             for r in pagos:
                 valor = int(r.get("clientepaga", 0))
-                total += valor
-                mensaje += f"- {r.get('cliente')} → ${valor}\n"
+                valor_cop = valor * 1000
+                total += valor_cop
 
-            mensaje += f"\n💰 *Total esperado:* ${total}"
+                valor_formateado = f"{valor_cop:,}".replace(",", ".")
+                mensaje += f"- {r.get('cliente')} → {valor_formateado} pesos\n"
+
+            total_formateado = f"{total:,}".replace(",", ".")
+            mensaje += f"\n💰 *Total esperado:* {total_formateado} pesos"
+
             resp.message(mensaje)
             return str(resp)
 
@@ -87,10 +91,14 @@ def whatsapp():
 
             mensaje = "❌ *Clientes con pago pendiente:*\n"
             for r in deudores:
+                valor = int(r.get("clientepaga", 0))
+                valor_cop = valor * 1000
+                valor_formateado = f"{valor_cop:,}".replace(",", ".")
+
                 mensaje += (
                     f"- {r.get('cliente')} "
                     f"(vence día {r.get('vence')}, "
-                    f"${r.get('clientepaga')})\n"
+                    f"{valor_formateado} pesos)\n"
                 )
 
             resp.message(mensaje)
