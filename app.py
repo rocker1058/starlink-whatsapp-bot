@@ -1,7 +1,5 @@
 import os
 from datetime import datetime
-import pytz
-
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
 
@@ -23,13 +21,6 @@ def esta_al_dia(valor):
         return False
     v = str(valor).strip().lower()
     return v in ["si", "true", "1", "yes"]
-
-# ---- FUNCION PARA NUMEROS SEGUROS ----
-def numero_seguro(valor):
-    try:
-        return int(str(valor).strip())
-    except:
-        return 0
 
 @app.route("/whatsapp", methods=["POST"])
 def whatsapp():
@@ -55,17 +46,14 @@ def whatsapp():
         data = rows[1:]
 
         registros = [dict(zip(headers, row)) for row in data]
-
-        # ---- ZONA HORARIA COLOMBIA ----
-        tz = pytz.timezone("America/Bogota")
-        hoy = datetime.now(tz).day
+        hoy = datetime.now().day
 
         # ================= PAGOS HOY =================
         if body == "pagos hoy":
             pagos = [
                 r for r in registros
                 if r.get("vence")
-                and numero_seguro(r.get("vence")) == hoy
+                and int(r["vence"]) == hoy
                 and not esta_al_dia(r.get("aldia"))
             ]
 
@@ -73,41 +61,28 @@ def whatsapp():
                 resp.message("✅ Hoy no hay pagos pendientes.")
                 return str(resp)
 
-            total_cobrar = 0
-            total_pagar = 0
+            total = 0
             mensaje = "📅 *Pagos de hoy:*\n"
 
             for r in pagos:
-                cliente_paga = numero_seguro(r.get("clientepaga")) * 1000
-                tu_pagas = numero_seguro(r.get("paga")) * 1000
-                ganancia = cliente_paga - tu_pagas
-                
-                total_cobrar += cliente_paga
-                total_pagar += tu_pagas
+                valor = int(r.get("clientepaga", 0))
+                valor_cop = valor * 1000
+                total += valor_cop
 
-                cliente_fmt = f"{cliente_paga:,}".replace(",", ".")
-                ganancia_fmt = f"{ganancia:,}".replace(",", ".")
-                mensaje += f"- {r.get('cliente')} → {cliente_fmt} pesos (ganancia: {ganancia_fmt})\n"
+                valor_formateado = f"{valor_cop:,}".replace(",", ".")
+                mensaje += f"- {r.get('cliente')} → {valor_formateado} pesos\n"
 
-            total_cobrar_fmt = f"{total_cobrar:,}".replace(",", ".")
-            total_pagar_fmt = f"{total_pagar:,}".replace(",", ".")
-            ganancia_total_fmt = f"{total_cobrar - total_pagar:,}".replace(",", ".")
-            
-            mensaje += "\n————————————\n"
-            mensaje += f"💰 *Total a cobrar:* {total_cobrar_fmt} pesos\n"
-            mensaje += f"💸 *Total a pagar:* {total_pagar_fmt} pesos\n"
-            mensaje += f"🎯 *Ganancia total:* {ganancia_total_fmt} pesos"
+            total_formateado = f"{total:,}".replace(",", ".")
+            mensaje += f"\n💰 *Total esperado:* {total_formateado} pesos"
 
             resp.message(mensaje)
             return str(resp)
 
         # ================= QUIEN DEBE =================
-
         if body == "quien debe":
             deudores = [
                 r for r in registros
-                if r.get("cliente")
-                and not esta_al_dia(r.get("aldia"))
+                if not esta_al_dia(r.get("aldia"))
             ]
 
             if not deudores:
@@ -115,28 +90,19 @@ def whatsapp():
                 return str(resp)
 
             mensaje = "❌ *Clientes con pago pendiente:*\n"
-
             for r in deudores:
-                cliente_paga = numero_seguro(r.get("clientepaga"))
-                tu_pagas = numero_seguro(r.get("paga"))
-
-                if cliente_paga == 0 or tu_pagas == 0:
-                    continue  # evita romper el bot
-
-                cliente_paga *= 1000
-                tu_pagas *= 1000
-                ganancia = cliente_paga - tu_pagas
+                valor = int(r.get("clientepaga", 0))
+                valor_cop = valor * 1000
+                valor_formateado = f"{valor_cop:,}".replace(",", ".")
 
                 mensaje += (
-                    f"- {r.get('cliente')}\n"
-                    f"  Cliente paga: {cliente_paga:,}".replace(",", ".") + " pesos\n"
-                    f"  Tú pagas: {tu_pagas:,}".replace(",", ".")
-                    + f" pesos    Ganancia: {ganancia:,}".replace(",", ".") + " pesos\n"
+                    f"- {r.get('cliente')} "
+                    f"(vence día {r.get('vence')}, "
+                    f"{valor_formateado} pesos)\n"
                 )
 
             resp.message(mensaje)
             return str(resp)
-
 
         # ================= AYUDA =================
         resp.message(
