@@ -92,10 +92,12 @@ def whatsapp():
             return str(resp)
 
         # ================= QUIEN DEBE =================
+
         if body == "quien debe":
             deudores = [
                 r for r in registros
-                if not esta_al_dia(r.get("aldia"))
+                if r.get("cliente")
+                and not esta_al_dia(r.get("aldia"))
             ]
 
             if not deudores:
@@ -105,23 +107,26 @@ def whatsapp():
             mensaje = "❌ *Clientes con pago pendiente:*\n"
 
             for r in deudores:
-                cliente_paga = numero_seguro(r.get("clientepaga")) * 1000
-                tu_pagas = numero_seguro(r.get("paga")) * 1000
-                ganancia = cliente_paga - tu_pagas
+                cliente_paga = numero_seguro(r.get("clientepaga"))
+                tu_pagas = numero_seguro(r.get("paga"))
 
-                cliente_fmt = f"{cliente_paga:,}".replace(",", ".")
-                tu_fmt = f"{tu_pagas:,}".replace(",", ".")
-                ganancia_fmt = f"{ganancia:,}".replace(",", ".")
+                if cliente_paga == 0 or tu_pagas == 0:
+                    continue  # evita romper el bot
+
+                cliente_paga *= 1000
+                tu_pagas *= 1000
+                ganancia = cliente_paga - tu_pagas
 
                 mensaje += (
                     f"- {r.get('cliente')}\n"
-                    f"  Cliente paga: {cliente_fmt} pesos\n"
-                    f"  Tú pagas: {tu_fmt} pesos\n"
-                    f"  Ganancia: {ganancia_fmt} pesos\n"
+                    f"  Cliente paga: {cliente_paga:,}".replace(",", ".") + " pesos\n"
+                    f"  Tú pagas: {tu_pagas:,}".replace(",", ".")
+                    + f" pesos    Ganancia: {ganancia:,}".replace(",", ".") + " pesos\n"
                 )
 
             resp.message(mensaje)
             return str(resp)
+
 
         # ================= AYUDA =================
         resp.message(
