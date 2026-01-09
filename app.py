@@ -33,6 +33,29 @@ def numero_seguro(valor):
 def formato_pesos(valor):
     return f"{valor:,}".replace(",", ".") + " pesos"
 
+def dividir_mensaje(texto, max_chars=1500):
+    if len(texto) <= max_chars:
+        return [texto]
+    
+    lineas = texto.split('\n')
+    mensajes = []
+    actual = ""
+    
+    for linea in lineas:
+        if len(actual + linea + '\n') > max_chars:
+            if actual:
+                mensajes.append(actual.strip())
+                actual = linea + '\n'
+            else:
+                mensajes.append(linea)
+        else:
+            actual += linea + '\n'
+    
+    if actual:
+        mensajes.append(actual.strip())
+    
+    return mensajes
+
 # ================= ROUTE =================
 @app.route("/whatsapp", methods=["POST"])
 def whatsapp():
@@ -104,8 +127,8 @@ def whatsapp():
                 mensaje += (
                     f"- {r.get('cliente')}\n"
                     f"  Cliente paga: {formato_pesos(cliente_paga)}\n"
-                    f"  Tú pagas: {formato_pesos(tu_pagas)}    "
-                    f"Ganancia: {formato_pesos(ganancia)}\n\n"
+                    f"  Tú pagas: {formato_pesos(tu_pagas)}\n"
+                    f"  Ganancia: {formato_pesos(ganancia)}\n\n"
                 )
 
             mensaje += "————————————\n"
@@ -138,11 +161,19 @@ def whatsapp():
                 mensaje += (
                     f"- {r.get('cliente')}\n"
                     f"  Cliente paga: {formato_pesos(cliente_paga)}\n"
-                    f"  Tú pagas: {formato_pesos(tu_pagas)}    "
-                    f"Ganancia: {formato_pesos(ganancia)}\n\n"
+                    f"  Tú pagas: {formato_pesos(tu_pagas)}\n"
+                    f"  Ganancia: {formato_pesos(ganancia)}\n\n"
                 )
 
-            resp.message(mensaje)
+            # Dividir mensaje si es muy largo
+            mensajes = dividir_mensaje(mensaje)
+            for i, msg in enumerate(mensajes):
+                if len(mensajes) > 1:
+                    header = f"({i+1}/{len(mensajes)})\n"
+                    resp.message(header + msg)
+                else:
+                    resp.message(msg)
+            
             return str(resp)
 
         # ================= AYUDA =================
