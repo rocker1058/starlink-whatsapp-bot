@@ -4,6 +4,8 @@ import pytz
 from docx import Document
 import tempfile
 import subprocess
+import boto3
+from botocore.exceptions import ClientError
 
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
@@ -16,6 +18,8 @@ app = Flask(__name__)
 # ================= CONFIG =================
 SHEET_ID = "1XG6HxVpxMD1HP4sIxCRM4EXCLpVYRReEOHYGqRd0tyM"
 SHEET_NAME = "clientes_bot"
+S3_BUCKET = os.environ.get("S3_BUCKET", "starlink-facturas")
+S3_REGION = os.environ.get("S3_REGION", "us-east-1")
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets"
@@ -127,6 +131,22 @@ def generar_factura_cliente(cliente_data):
 
     except Exception as e:
         return None, str(e)
+
+def subir_a_s3(archivo_path, nombre_archivo):
+    """Sube archivo a S3 y retorna URL pública"""
+    try:
+        s3_client = boto3.client('s3', region_name=S3_REGION)
+        
+        # Subir archivo
+        s3_key = f"facturas/{nombre_archivo}"
+        s3_client.upload_file(archivo_path, S3_BUCKET, s3_key)
+        
+        # Generar URL pública
+        url = f"https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{s3_key}"
+        return url
+        
+    except Exception as e:
+        return None
 
 # ================= ROUTE =================
 @app.route("/whatsapp", methods=["POST"])
@@ -334,13 +354,14 @@ def whatsapp():
             
             for r in registros:
                 if r.get("cliente"):
-                    cliente_nombre = r.get("cliente").lower()
+                    cliente_nombre = r.get("cliente").strip().lower()
+                    nombre_buscar = nombre_cliente.strip().lower()
                     # Coincidencia exacta
-                    if cliente_nombre == nombre_cliente.lower():
+                    if cliente_nombre == nombre_buscar:
                         cliente_encontrado = r
                         break
                     # Coincidencia parcial
-                    elif nombre_cliente.lower() in cliente_nombre:
+                    elif nombre_buscar in cliente_nombre:
                         coincidencias.append(r)
             
             # Si no hay coincidencia exacta, usar la primera parcial
@@ -361,8 +382,23 @@ def whatsapp():
                 return str(resp)
             
             try:
-                pdf_path, numero_factura = generar_factura_cliente(cliente_encontrado)
-                resp.message(f"✅ Factura {numero_factura} generada para {cliente_encontrado.get('cliente')}\n📄 Archivo: {pdf_path}")
+                archivo_path, numero_factura = generar_factura_cliente(cliente_encontrado)
+                if archivo_path:
+                    # Subir a S3
+                    nombre_archivo = os.path.basename(archivo_path)
+                    url_descarga = subir_a_s3(archivo_path, nombre_archivo)
+                    
+                    if url_descarga:
+                        resp.message(f"✅ Factura {numero_factura} generada para {cliente_encontrado.get('cliente')}\n📄 Descargar: {url_descarga}")
+                        # Limpiar archivo local
+                        try:
+                            os.remove(archivo_path)
+                        except:
+                            pass
+                    else:
+                        resp.message(f"✅ Factura {numero_factura} generada pero error subiendo a S3\n📄 Archivo local: {archivo_path}")
+                else:
+                    resp.message(f"❌ Error generando factura")
             except Exception as e:
                 resp.message(f"❌ Error generando factura: {str(e)}")
             
