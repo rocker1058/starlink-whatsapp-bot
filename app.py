@@ -15,7 +15,7 @@ SHEET_ID = "1XG6HxVpxMD1HP4sIxCRM4EXCLpVYRReEOHYGqRd0tyM"
 SHEET_NAME = "clientes_bot"
 
 SCOPES = [
-    "https://www.googleapis.com/auth/spreadsheets.readonly"
+    "https://www.googleapis.com/auth/spreadsheets"
 ]
 
 # ================= HELPERS =================
@@ -96,6 +96,41 @@ def whatsapp():
         # ---- FECHA COLOMBIA ----
         tz = pytz.timezone("America/Bogota")
         hoy = datetime.now(tz).day
+
+        # ================= MARCAR PAGO =================
+        if " pago" in body:
+            nombre_cliente = body.replace(" pago", "").strip()
+            
+            # Buscar cliente
+            cliente_encontrado = None
+            fila_cliente = None
+            
+            for i, r in enumerate(registros):
+                if r.get("cliente") and nombre_cliente.lower() in r.get("cliente").lower():
+                    cliente_encontrado = r
+                    fila_cliente = i + 2  # +2 porque Excel empieza en 1 y hay header
+                    break
+            
+            if not cliente_encontrado:
+                resp.message(f"❌ No encontré al cliente '{nombre_cliente}'")
+                return str(resp)
+            
+            # Actualizar Excel - marcar como pagado
+            try:
+                # La columna "aldia" es la H (posición 8)
+                sheet.values().update(
+                    spreadsheetId=SHEET_ID,
+                    range=f"{SHEET_NAME}!H{fila_cliente}",
+                    valueInputOption="RAW",
+                    body={"values": [["SI"]]}
+                ).execute()
+                
+                resp.message(f"✅ {cliente_encontrado.get('cliente')} marcado como pagado")
+                
+            except Exception as e:
+                resp.message(f"❌ Error al actualizar: {str(e)}")
+            
+            return str(resp)
 
         # ================= PAGOS HOY =================
         if body == "pagos hoy":
@@ -181,7 +216,8 @@ def whatsapp():
             "🤖 *Comandos disponibles:*\n"
             "- ping\n"
             "- pagos hoy\n"
-            "- quien debe"
+            "- quien debe\n"
+            "- [nombre] pago (ej: juanes pago)"
         )
 
     except Exception as e:
