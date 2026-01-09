@@ -97,8 +97,49 @@ def whatsapp():
         tz = pytz.timezone("America/Bogota")
         hoy = datetime.now(tz).day
 
+        # ================= PROXIMOS PAGOS =================
+        if body == "proximos pagos":
+            # Obtener los próximos 3 días
+            hoy = datetime.now(tz).day
+            proximos_dias = [(hoy + i) % 31 or 31 for i in range(1, 4)]
+            
+            proximos = [
+                r for r in registros
+                if r.get("cliente")
+                and r.get("vence")
+                and numero_seguro(r.get("vence")) in proximos_dias
+                and not esta_al_dia(r.get("aldia"))
+            ]
+
+            if not proximos:
+                resp.message("✅ No hay pagos pendientes en los próximos 3 días.")
+                return str(resp)
+
+            mensaje = "⏰ *Pagos próximos (3 días):*\n\n"
+
+            for r in proximos:
+                dia_vence = numero_seguro(r.get("vence"))
+                cliente_paga = numero_seguro(r.get("clientepaga")) * 1000
+                
+                mensaje += (
+                    f"- {r.get('cliente')}\n"
+                    f"  Vence: día {dia_vence}\n"
+                    f"  Monto: {formato_pesos(cliente_paga)}\n\n"
+                )
+
+            # Dividir mensaje si es muy largo
+            mensajes = dividir_mensaje(mensaje)
+            for i, msg in enumerate(mensajes):
+                if len(mensajes) > 1:
+                    header = f"({i+1}/{len(mensajes)})\n"
+                    resp.message(header + msg)
+                else:
+                    resp.message(msg)
+            
+            return str(resp)
+
         # ================= MARCAR PAGO =================
-        if " pago" in body:
+        if " pago" in body and body != "proximos pagos":
             nombre_cliente = body.replace(" pago", "").strip()
             
             # Buscar cliente
