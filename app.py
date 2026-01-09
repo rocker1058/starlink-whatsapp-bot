@@ -115,29 +115,18 @@ def generar_factura_cliente(cliente_data):
                     if "$450,000" in cell.text:
                         cell.text = cell.text.replace("$450,000", formato_pesos(monto))
 
-        # Guardar factura
+        # Guardar factura Word (completa)
         factura_path = f"factura_{numero_factura}_{cliente_data.get('cliente').replace(' ', '_')}.docx"
         doc.save(factura_path)
         
-        # Convertir a PDF usando reportlab
+        # Convertir a PDF manteniendo formato
         try:
-            from reportlab.pdfgen import canvas
-            from reportlab.lib.pagesizes import letter
-            
+            import pypandoc
             pdf_path = factura_path.replace('.docx', '.pdf')
-            c = canvas.Canvas(pdf_path, pagesize=letter)
-            
-            # Datos básicos de la factura
-            c.drawString(100, 750, f"FACTURA {numero_factura}")
-            c.drawString(100, 720, f"Fecha: {fecha_actual}")
-            c.drawString(100, 690, f"Cliente: {cliente_data.get('cliente')}")
-            c.drawString(100, 660, f"Servicio: SERVICIO ANTENA PERIODO {datetime.now(pytz.timezone('America/Bogota')).strftime('%B').upper()}")
-            c.drawString(100, 630, f"Monto: {formato_pesos(monto)}")
-            
-            c.save()
+            pypandoc.convert_file(factura_path, 'pdf', outputfile=pdf_path)
             return pdf_path, numero_factura
         except Exception:
-            # Si falla, devolver el archivo Word
+            # Si falla, devolver el Word
             return factura_path, numero_factura
 
     except Exception as e:
