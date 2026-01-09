@@ -119,14 +119,19 @@ def generar_factura_cliente(cliente_data):
         factura_path = f"factura_{numero_factura}_{cliente_data.get('cliente').replace(' ', '_')}.docx"
         doc.save(factura_path)
         
-        # Convertir a PDF manteniendo formato
+        # Convertir a PDF con LibreOffice
         try:
-            import pypandoc
+            result = subprocess.run([
+                "libreoffice", "--headless", "--convert-to", "pdf", factura_path
+            ], capture_output=True, check=True, timeout=30)
+            
             pdf_path = factura_path.replace('.docx', '.pdf')
-            pypandoc.convert_file(factura_path, 'pdf', outputfile=pdf_path)
-            return pdf_path, numero_factura
-        except Exception:
-            # Si falla, devolver el Word
+            if os.path.exists(pdf_path):
+                return pdf_path, numero_factura
+            else:
+                return factura_path, numero_factura
+        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+            # Si LibreOffice falla, devolver Word
             return factura_path, numero_factura
 
     except Exception as e:
