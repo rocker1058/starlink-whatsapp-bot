@@ -119,11 +119,22 @@ def generar_factura_cliente(cliente_data):
         factura_path = f"factura_{numero_factura}_{cliente_data.get('cliente').replace(' ', '_')}.docx"
         doc.save(factura_path)
         
-        # Convertir a PDF usando docx2pdf
+        # Convertir a PDF usando reportlab
         try:
-            from docx2pdf import convert
+            from reportlab.pdfgen import canvas
+            from reportlab.lib.pagesizes import letter
+            
             pdf_path = factura_path.replace('.docx', '.pdf')
-            convert(factura_path, pdf_path)
+            c = canvas.Canvas(pdf_path, pagesize=letter)
+            
+            # Datos básicos de la factura
+            c.drawString(100, 750, f"FACTURA {numero_factura}")
+            c.drawString(100, 720, f"Fecha: {fecha_actual}")
+            c.drawString(100, 690, f"Cliente: {cliente_data.get('cliente')}")
+            c.drawString(100, 660, f"Servicio: SERVICIO ANTENA PERIODO {datetime.now(pytz.timezone('America/Bogota')).strftime('%B').upper()}")
+            c.drawString(100, 630, f"Monto: {formato_pesos(monto)}")
+            
+            c.save()
             return pdf_path, numero_factura
         except Exception:
             # Si falla, devolver el archivo Word
