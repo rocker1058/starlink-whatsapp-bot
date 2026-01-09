@@ -1,6 +1,9 @@
 import os
 from datetime import datetime
 import pytz
+from docx import Document
+import tempfile
+import subprocess
 
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
@@ -55,6 +58,73 @@ def dividir_mensaje(texto, max_chars=1500):
         mensajes.append(actual.strip())
     
     return mensajes
+
+def obtener_siguiente_numero():
+    """Obtiene y actualiza el número consecutivo de factura"""
+    contador_path = "contador_facturas.txt"
+    if not os.path.exists(contador_path):
+        with open(contador_path, 'w') as f:
+            f.write('1')
+        return 1
+    
+    with open(contador_path, 'r') as f:
+        numero = int(f.read().strip())
+    
+    # Actualizar contador
+    with open(contador_path, 'w') as f:
+        f.write(str(numero + 1))
+    
+    return numero
+
+def generar_factura_cliente(cliente_data):
+    """Genera factura para un cliente"""
+    try:
+        # Datos para la factura
+        fecha_actual = datetime.now(pytz.timezone("America/Bogota")).strftime("%d/%m/%Y")
+        numero_factura = f"FAC-{obtener_siguiente_numero():03d}"
+        monto = numero_seguro(cliente_data.get("clientepaga")) * 1000
+        
+        # Cargar plantilla
+        doc = Document("FACTURA MARAVILLA (4).docx")
+        
+        # Modificar campos en las tablas
+        for table in doc.tables:
+            for row in table.rows:
+                for cell in row.cells:
+                    # Reemplazar campos
+                    if "PA-02-R-02-4" in cell.text:
+                        cell.text = cell.text.replace("PA-02-R-02-4", numero_factura)
+                    if "19/08/2025" in cell.text:
+                        cell.text = cell.text.replace("19/08/2025", fecha_actual)
+                    if "MARAVILLA" in cell.text and "OCTAVA MARAVILLA" not in cell.text:
+                        cell.text = cell.text.replace("MARAVILLA", cliente_data.get("cliente").upper())
+                    if "SERVICIO ANTENA OCTAVA MARAVILLA" in cell.text:
+                        meses = {
+                            'January': 'ENERO', 'February': 'FEBRERO', 'March': 'MARZO',
+                            'April': 'ABRIL', 'May': 'MAYO', 'June': 'JUNIO',
+                            'July': 'JULIO', 'August': 'AGOSTO', 'September': 'SEPTIEMBRE',
+                            'October': 'OCTUBRE', 'November': 'NOVIEMBRE', 'December': 'DICIEMBRE'
+                        }
+                        mes_ingles = datetime.now().strftime("%B")
+                        mes_espanol = meses.get(mes_ingles, mes_ingles.upper())
+                        cell.text = f"SERVICIO ANTENA PERIODO {mes_espanol}"
+                    if "$450,000" in cell.text:
+                        cell.text = cell.text.replace("$450,000", formato_pesos(monto))
+
+        # Guardar factura
+        factura_path = f"factura_{numero_factura}_{cliente_data.get('cliente').replace(' ', '_')}.docx"
+        doc.save(factura_path)
+        
+        # Convertir a PDF
+        subprocess.run([
+            "libreoffice", "--headless", "--convert-to", "pdf", factura_path
+        ], capture_output=True)
+        
+        pdf_path = factura_path.replace('.docx', '.pdf')
+        return pdf_path, numero_factura
+
+    except Exception as e:
+        return None, str(e)
 
 # ================= ROUTE =================
 @app.route("/whatsapp", methods=["POST"])
@@ -215,47 +285,6 @@ def whatsapp():
             resp.message(mensaje)
             return str(resp)
 
-        # ================= PROXIMOS PAGOS =================
-        if body == "proximos pagos":
-            # Obtener los próximos 3 días
-            hoy = datetime.now(tz).day
-            proximos_dias = [(hoy + i) % 31 or 31 for i in range(1, 4)]
-            
-            proximos = [
-                r for r in registros
-                if r.get("cliente")
-                and r.get("vence")
-                and numero_seguro(r.get("vence")) in proximos_dias
-                and not esta_al_dia(r.get("aldia"))
-            ]
-
-            if not proximos:
-                resp.message("✅ No hay pagos pendientes en los próximos 3 días.")
-                return str(resp)
-
-            mensaje = "⏰ *Pagos próximos (3 días):*\n\n"
-
-            for r in proximos:
-                dia_vence = numero_seguro(r.get("vence"))
-                cliente_paga = numero_seguro(r.get("clientepaga")) * 1000
-                
-                mensaje += (
-                    f"- {r.get('cliente')}\n"
-                    f"  Vence: día {dia_vence}\n"
-                    f"  Monto: {formato_pesos(cliente_paga)}\n\n"
-                )
-
-            # Dividir mensaje si es muy largo
-            mensajes = dividir_mensaje(mensaje)
-            for i, msg in enumerate(mensajes):
-                if len(mensajes) > 1:
-                    header = f"({i+1}/{len(mensajes)})\n"
-                    resp.message(header + msg)
-                else:
-                    resp.message(msg)
-            
-            return str(resp)
-
         # ================= QUIEN DEBE =================
         if body == "quien debe":
             deudores = [
@@ -293,6 +322,29 @@ def whatsapp():
             
             return str(resp)
 
+        # ================= GENERAR FACTURA =================
+        if body.startswith("factura "):
+            nombre_cliente = body.replace("factura ", "").strip()
+            
+            # Buscar cliente
+            cliente_encontrado = None
+            for r in registros:
+                if r.get("cliente") and nombre_cliente.lower() in r.get("cliente").lower():
+                    cliente_encontrado = r
+                    break
+            
+            if not cliente_encontrado:
+                resp.message(f"❌ No encontré al cliente '{nombre_cliente}'")
+                return str(resp)
+            
+            try:
+                pdf_path, numero_factura = generar_factura_cliente(cliente_encontrado)
+                resp.message(f"✅ Factura {numero_factura} generada para {cliente_encontrado.get('cliente')}\n📄 Archivo: {pdf_path}")
+            except Exception as e:
+                resp.message(f"❌ Error generando factura: {str(e)}")
+            
+            return str(resp)
+
         # ================= AYUDA =================
         resp.message(
             "🤖 *Comandos disponibles:*\n"
@@ -300,6 +352,7 @@ def whatsapp():
             "- pagos hoy\n"
             "- quien debe\n"
             "- proximos pagos\n"
+            "- factura [nombre] (ej: factura juanes)\n"
             "- [nombre] pago (ej: juanes pago)"
         )
 

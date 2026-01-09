@@ -6,3 +6,6 @@ __pycache__/
 .env
 .DS_Store
 *.log
+factura_*.docx
+factura_*.pdf
+contador_facturas.txt
