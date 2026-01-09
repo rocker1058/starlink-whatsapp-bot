@@ -115,13 +115,15 @@ def generar_factura_cliente(cliente_data):
         factura_path = f"factura_{numero_factura}_{cliente_data.get('cliente').replace(' ', '_')}.docx"
         doc.save(factura_path)
         
-        # Convertir a PDF
-        subprocess.run([
-            "libreoffice", "--headless", "--convert-to", "pdf", factura_path
-        ], capture_output=True)
-        
-        pdf_path = factura_path.replace('.docx', '.pdf')
-        return pdf_path, numero_factura
+        # Convertir a PDF usando docx2pdf
+        try:
+            from docx2pdf import convert
+            pdf_path = factura_path.replace('.docx', '.pdf')
+            convert(factura_path, pdf_path)
+            return pdf_path, numero_factura
+        except Exception:
+            # Si falla, devolver el archivo Word
+            return factura_path, numero_factura
 
     except Exception as e:
         return None, str(e)
@@ -326,12 +328,33 @@ def whatsapp():
         if body.startswith("factura "):
             nombre_cliente = body.replace("factura ", "").strip()
             
-            # Buscar cliente
+            # Buscar cliente - primero coincidencia exacta, luego parcial
             cliente_encontrado = None
+            coincidencias = []
+            
             for r in registros:
-                if r.get("cliente") and nombre_cliente.lower() in r.get("cliente").lower():
-                    cliente_encontrado = r
-                    break
+                if r.get("cliente"):
+                    cliente_nombre = r.get("cliente").lower()
+                    # Coincidencia exacta
+                    if cliente_nombre == nombre_cliente.lower():
+                        cliente_encontrado = r
+                        break
+                    # Coincidencia parcial
+                    elif nombre_cliente.lower() in cliente_nombre:
+                        coincidencias.append(r)
+            
+            # Si no hay coincidencia exacta, usar la primera parcial
+            if not cliente_encontrado and coincidencias:
+                if len(coincidencias) == 1:
+                    cliente_encontrado = coincidencias[0]
+                else:
+                    # Múltiples coincidencias - mostrar opciones
+                    mensaje = f"❓ Encontré varios clientes con '{nombre_cliente}':\n\n"
+                    for r in coincidencias:
+                        mensaje += f"- {r.get('cliente')}\n"
+                    mensaje += "\nEscribe el nombre más específico."
+                    resp.message(mensaje)
+                    return str(resp)
             
             if not cliente_encontrado:
                 resp.message(f"❌ No encontré al cliente '{nombre_cliente}'")
