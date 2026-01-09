@@ -18,7 +18,7 @@ app = Flask(__name__)
 # ================= CONFIG =================
 SHEET_ID = "1XG6HxVpxMD1HP4sIxCRM4EXCLpVYRReEOHYGqRd0tyM"
 SHEET_NAME = "clientes_bot"
-S3_BUCKET = os.environ.get("S3_BUCKET", "starlink-facturas")
+S3_BUCKET = os.environ.get("S3_BUCKET", "starlink-facturas-bot-2025")
 S3_REGION = os.environ.get("S3_REGION", "us-east-1")
 
 SCOPES = [
