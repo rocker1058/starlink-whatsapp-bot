@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 from docx import Document
 import tempfile
@@ -196,15 +196,19 @@ def whatsapp():
 
         # ================= PROXIMOS PAGOS =================
         if body == "proximos pagos":
-            # Obtener los próximos 3 días
-            hoy = datetime.now(tz).day
-            proximos_dias = [(hoy + i) % 31 or 31 for i in range(1, 4)]
+            # Obtener fecha actual y próximos 3 días (incluyendo hoy)
+            fecha_actual = datetime.now(tz)
+            dias_a_revisar = []
+            
+            for i in range(4):  # Hoy + 3 días = 4 días
+                fecha = fecha_actual + timedelta(days=i)
+                dias_a_revisar.append(fecha.day)
             
             proximos = [
                 r for r in registros
                 if r.get("cliente")
                 and r.get("vence")
-                and numero_seguro(r.get("vence")) in proximos_dias
+                and numero_seguro(r.get("vence")) in dias_a_revisar
                 and not esta_al_dia(r.get("aldia"))
             ]
 
@@ -409,6 +413,111 @@ def whatsapp():
             
             return str(resp)
 
+        # ================= CUANTO DEBE [NOMBRE] =================
+        if body.startswith("cuanto debe "):
+            nombre_cliente = body.replace("cuanto debe ", "").strip()
+            
+            # Buscar cliente - primero coincidencia exacta, luego parcial
+            cliente_encontrado = None
+            coincidencias = []
+            
+            for r in registros:
+                if r.get("cliente"):
+                    cliente_nombre = r.get("cliente").strip().lower()
+                    nombre_buscar = nombre_cliente.strip().lower()
+                    # Coincidencia exacta
+                    if cliente_nombre == nombre_buscar:
+                        cliente_encontrado = r
+                        break
+                    # Coincidencia parcial
+                    elif nombre_buscar in cliente_nombre:
+                        coincidencias.append(r)
+            
+            # Si no hay coincidencia exacta, usar la primera parcial
+            if not cliente_encontrado and coincidencias:
+                if len(coincidencias) == 1:
+                    cliente_encontrado = coincidencias[0]
+                else:
+                    # Múltiples coincidencias - mostrar opciones
+                    mensaje = f"❓ Encontré varios clientes con '{nombre_cliente}':\n\n"
+                    for r in coincidencias:
+                        mensaje += f"- {r.get('cliente')}\n"
+                    mensaje += "\nEscribe el nombre más específico."
+                    resp.message(mensaje)
+                    return str(resp)
+            
+            if not cliente_encontrado:
+                resp.message(f"❌ No encontré al cliente '{nombre_cliente}'")
+                return str(resp)
+            
+            # Construir respuesta con toda la información
+            al_dia = esta_al_dia(cliente_encontrado.get("aldia"))
+            estado = "✅ Al día" if al_dia else "❌ En mora"
+            dia_vence = numero_seguro(cliente_encontrado.get("vence"))
+            cliente_paga = numero_seguro(cliente_encontrado.get("clientepaga")) * 1000
+            tu_pagas = numero_seguro(cliente_encontrado.get("paga")) * 1000
+            ganancia = cliente_paga - tu_pagas
+            correo = cliente_encontrado.get("correo", "No registrado")
+            serial = cliente_encontrado.get("serial", "No registrado")
+            corte = cliente_encontrado.get("corte", "No registrado")
+            
+            mensaje = (
+                f"📄 *Información de {cliente_encontrado.get('cliente')}*\n\n"
+                f"{estado}\n"
+                f"📅 Vence: día {dia_vence}\n"
+                f"💰 Cliente paga: {formato_pesos(cliente_paga)}\n"
+                f"💵 Tú pagas: {formato_pesos(tu_pagas)}\n"
+                f"📈 Ganancia: {formato_pesos(ganancia)}\n"
+                f"✂️ Corte del servicio: día {corte}\n"
+                f"📧 Correo: {correo}\n"
+                f"🔢 Serial antena: {serial}"
+            )
+            
+            resp.message(mensaje)
+            return str(resp)
+
+        # ================= BUSQUEDA POR SERIAL =================
+        # Detectar si el mensaje parece un serial (contiene "stk" o formato similar)
+        if "stk" in body or (len(body) > 5 and "-" in body):
+            serial_buscar = body.strip()
+            
+            # Buscar por serial
+            cliente_encontrado = None
+            for r in registros:
+                if r.get("serial") and serial_buscar.lower() in r.get("serial").lower():
+                    cliente_encontrado = r
+                    break
+            
+            if cliente_encontrado:
+                # Mostrar la misma información que "cuanto debe"
+                al_dia = esta_al_dia(cliente_encontrado.get("aldia"))
+                estado = "✅ Al día" if al_dia else "❌ En mora"
+                dia_vence = numero_seguro(cliente_encontrado.get("vence"))
+                cliente_paga = numero_seguro(cliente_encontrado.get("clientepaga")) * 1000
+                tu_pagas = numero_seguro(cliente_encontrado.get("paga")) * 1000
+                ganancia = cliente_paga - tu_pagas
+                correo = cliente_encontrado.get("correo", "No registrado")
+                serial = cliente_encontrado.get("serial", "No registrado")
+                corte = cliente_encontrado.get("corte", "No registrado")
+                
+                mensaje = (
+                    f"📄 *Información de {cliente_encontrado.get('cliente')}*\n\n"
+                    f"{estado}\n"
+                    f"📅 Vence: día {dia_vence}\n"
+                    f"💰 Cliente paga: {formato_pesos(cliente_paga)}\n"
+                    f"💵 Tú pagas: {formato_pesos(tu_pagas)}\n"
+                    f"📈 Ganancia: {formato_pesos(ganancia)}\n"
+                    f"✂️ Corte del servicio: día {corte}\n"
+                    f"📧 Correo: {correo}\n"
+                    f"🔢 Serial antena: {serial}"
+                )
+                
+                resp.message(mensaje)
+                return str(resp)
+            else:
+                resp.message(f"❌ No se encontró ningún cliente con ese serial")
+                return str(resp)
+
         # ================= AYUDA =================
         resp.message(
             "🤖 *Comandos disponibles:*\n"
@@ -416,8 +525,10 @@ def whatsapp():
             "- pagos hoy\n"
             "- quien debe\n"
             "- proximos pagos\n"
+            "- cuanto debe [nombre] (ej: cuanto debe juanes)\n"
             "- factura [nombre] (ej: factura juanes)\n"
-            "- [nombre] pago (ej: juanes pago)"
+            "- [nombre] pago (ej: juanes pago)\n"
+            "- [serial] (ej: stk-392020-xx)"
         )
 
     except Exception as e:
