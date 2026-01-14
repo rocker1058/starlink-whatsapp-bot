@@ -459,7 +459,6 @@ def whatsapp():
             ganancia = cliente_paga - tu_pagas
             correo = cliente_encontrado.get("correo", "No registrado")
             serial = cliente_encontrado.get("serial_antena", "No registrado")
-            corte = cliente_encontrado.get("corte", "No registrado")
             kit = cliente_encontrado.get("kit_antena", "")
             nota = cliente_encontrado.get("NOTA", "")
             
@@ -470,7 +469,7 @@ def whatsapp():
                 f"Cliente paga: {formato_pesos(cliente_paga)}\n"
                 f"Tú pagas: {formato_pesos(tu_pagas)}\n"
                 f"Ganancia: {formato_pesos(ganancia)}\n"
-                f"Corte del servicio: día {corte}\n"
+                f"Corte del servicio: día {dia_vence}\n"
                 f"Correo: {correo}\n"
                 f"Serial antena: {serial}\n"
                 f"Kit: {kit}"
@@ -504,7 +503,6 @@ def whatsapp():
                 ganancia = cliente_paga - tu_pagas
                 correo = cliente_encontrado.get("correo", "No registrado")
                 serial = cliente_encontrado.get("serial_antena", "No registrado")
-                corte = cliente_encontrado.get("corte", "No registrado")
                 kit = cliente_encontrado.get("kit_antena", "")
                 nota = cliente_encontrado.get("NOTA", "")
                 
@@ -515,9 +513,9 @@ def whatsapp():
                     f"Cliente paga: {formato_pesos(cliente_paga)}\n"
                     f"Tú pagas: {formato_pesos(tu_pagas)}\n"
                     f"Ganancia: {formato_pesos(ganancia)}\n"
-                    f"Corte del servicio: día {corte}\n"
+                    f"Corte del servicio: día {dia_vence}\n"
                     f"Correo: {correo}\n"
-                    f"Serial: {serial}\n"
+                    f"Serial antena: {serial}\n"
                     f"Kit: {kit}"
                 )
                 
