@@ -452,26 +452,32 @@ def whatsapp():
             
             # Construir respuesta con toda la información
             al_dia = esta_al_dia(cliente_encontrado.get("aldia"))
-            estado = "✅ Al día" if al_dia else "❌ En mora"
+            estado = "Al día" if al_dia else "En mora"
             dia_vence = numero_seguro(cliente_encontrado.get("vence"))
             cliente_paga = numero_seguro(cliente_encontrado.get("clientepaga")) * 1000
             tu_pagas = numero_seguro(cliente_encontrado.get("paga")) * 1000
             ganancia = cliente_paga - tu_pagas
             correo = cliente_encontrado.get("correo", "No registrado")
-            serial = cliente_encontrado.get("serial", "No registrado")
+            serial = cliente_encontrado.get("serial_antena", "No registrado")
             corte = cliente_encontrado.get("corte", "No registrado")
+            kit = cliente_encontrado.get("kit_antena", "")
+            nota = cliente_encontrado.get("NOTA", "")
             
             mensaje = (
-                f"📄 *Información de {cliente_encontrado.get('cliente')}*\n\n"
+                f"Información de {cliente_encontrado.get('cliente')}\n\n"
                 f"{estado}\n"
-                f"📅 Vence: día {dia_vence}\n"
-                f"💰 Cliente paga: {formato_pesos(cliente_paga)}\n"
-                f"💵 Tú pagas: {formato_pesos(tu_pagas)}\n"
-                f"📈 Ganancia: {formato_pesos(ganancia)}\n"
-                f"✂️ Corte del servicio: día {corte}\n"
-                f"📧 Correo: {correo}\n"
-                f"🔢 Serial antena: {serial}"
+                f"Vence: día {dia_vence}\n"
+                f"Cliente paga: {formato_pesos(cliente_paga)}\n"
+                f"Tú pagas: {formato_pesos(tu_pagas)}\n"
+                f"Ganancia: {formato_pesos(ganancia)}\n"
+                f"Corte del servicio: día {corte}\n"
+                f"Correo: {correo}\n"
+                f"Serial antena: {serial}\n"
+                f"Kit: {kit}"
             )
+            
+            if nota:
+                mensaje += f"\nNota: {nota}"
             
             resp.message(mensaje)
             return str(resp)
@@ -491,26 +497,32 @@ def whatsapp():
             if cliente_encontrado:
                 # Mostrar la misma información que "cuanto debe"
                 al_dia = esta_al_dia(cliente_encontrado.get("aldia"))
-                estado = "✅ Al día" if al_dia else "❌ En mora"
+                estado = "Al día" if al_dia else "En mora"
                 dia_vence = numero_seguro(cliente_encontrado.get("vence"))
                 cliente_paga = numero_seguro(cliente_encontrado.get("clientepaga")) * 1000
                 tu_pagas = numero_seguro(cliente_encontrado.get("paga")) * 1000
                 ganancia = cliente_paga - tu_pagas
                 correo = cliente_encontrado.get("correo", "No registrado")
-                serial = cliente_encontrado.get("serial", "No registrado")
+                serial = cliente_encontrado.get("serial_antena", "No registrado")
                 corte = cliente_encontrado.get("corte", "No registrado")
+                kit = cliente_encontrado.get("kit_antena", "")
+                nota = cliente_encontrado.get("NOTA", "")
                 
                 mensaje = (
-                    f"📄 *Información de {cliente_encontrado.get('cliente')}*\n\n"
+                    f"Información de {cliente_encontrado.get('cliente')}\n\n"
                     f"{estado}\n"
-                    f"📅 Vence: día {dia_vence}\n"
-                    f"💰 Cliente paga: {formato_pesos(cliente_paga)}\n"
-                    f"💵 Tú pagas: {formato_pesos(tu_pagas)}\n"
-                    f"📈 Ganancia: {formato_pesos(ganancia)}\n"
-                    f"✂️ Corte del servicio: día {corte}\n"
-                    f"📧 Correo: {correo}\n"
-                    f"🔢 Serial antena: {serial}"
+                    f"Vence: día {dia_vence}\n"
+                    f"Cliente paga: {formato_pesos(cliente_paga)}\n"
+                    f"Tú pagas: {formato_pesos(tu_pagas)}\n"
+                    f"Ganancia: {formato_pesos(ganancia)}\n"
+                    f"Corte del servicio: día {corte}\n"
+                    f"Correo: {correo}\n"
+                    f"Serial: {serial}\n"
+                    f"Kit: {kit}"
                 )
+                
+                if nota:
+                    mensaje += f"\nNota: {nota}"
                 
                 resp.message(mensaje)
                 return str(resp)
