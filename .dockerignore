@@ -9,13 +9,11 @@ __pycache__/
 *.egg-info
 dist/
 build/
-contador_facturas.txt
 .git
 .gitignore
-# Excluir PDFs generados pero NO las plantillas
-factura_*.pdf
+# Solo excluir archivos generados temporalmente
+factura_FAC-*.pdf
+factura_FAC-*.docx
 cotizacion_*.pdf
-factura_*.docx
-cotizacion_*.tex
-*.aux
-*.log
+cotizacion_*.aux
+cotizacion_*.log
