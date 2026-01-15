@@ -4,9 +4,9 @@ FROM python:3.9-slim
 RUN apt-get update && apt-get install -y \
     libreoffice-writer \
     texlive-xetex \
-    texlive-fonts-recommended \
+    texlive-fonts-extra \
     texlive-lang-spanish \
-    fonts-dejavu \
+    fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 # Crear directorio de trabajo
