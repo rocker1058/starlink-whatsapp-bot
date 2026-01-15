@@ -1,12 +1,11 @@
-FROM python:3.9-slim
+FROM python:3.9
 
 # Instalar LibreOffice, LaTeX y dependencias
 RUN apt-get update && apt-get install -y \
     libreoffice-writer \
     texlive-xetex \
-    texlive-fonts-extra \
-    texlive-lang-spanish \
-    fonts-dejavu-core \
+    texlive-latex-extra \
+    fonts-dejavu \
     && rm -rf /var/lib/apt/lists/*
 
 # Crear directorio de trabajo
