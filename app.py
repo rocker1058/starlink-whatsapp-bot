@@ -282,12 +282,18 @@ def whatsapp():
             for r in proximos:
                 dia_vence = numero_seguro(r.get("vence"))
                 cliente_paga = numero_seguro(r.get("clientepaga")) * 1000
+                nota = r.get("NOTA", "")
                 
                 mensaje += (
                     f"- {r.get('cliente')}\n"
                     f"  Vence: día {dia_vence}\n"
-                    f"  Monto: {formato_pesos(cliente_paga)}\n\n"
+                    f"  Monto: {formato_pesos(cliente_paga)}\n"
                 )
+                
+                if nota:
+                    mensaje += f"  Nota: {nota}\n"
+                
+                mensaje += "\n"
 
             # Dividir mensaje si es muy largo
             mensajes = dividir_mensaje(mensaje)
@@ -358,6 +364,7 @@ def whatsapp():
                 cliente_paga = numero_seguro(r.get("clientepaga")) * 1000
                 tu_pagas = numero_seguro(r.get("paga")) * 1000
                 ganancia = cliente_paga - tu_pagas
+                nota = r.get("NOTA", "")
 
                 total_clientes += cliente_paga
                 total_starlink += tu_pagas
@@ -366,8 +373,13 @@ def whatsapp():
                     f"- {r.get('cliente')}\n"
                     f"  Cliente paga: {formato_pesos(cliente_paga)}\n"
                     f"  Tú pagas: {formato_pesos(tu_pagas)}\n"
-                    f"  Ganancia: {formato_pesos(ganancia)}\n\n"
+                    f"  Ganancia: {formato_pesos(ganancia)}\n"
                 )
+                
+                if nota:
+                    mensaje += f"  Nota: {nota}\n"
+                
+                mensaje += "\n"
 
             mensaje += "————————————\n"
             mensaje += f"💰 Total clientes: {formato_pesos(total_clientes)}\n"
@@ -395,13 +407,19 @@ def whatsapp():
                 cliente_paga = numero_seguro(r.get("clientepaga")) * 1000
                 tu_pagas = numero_seguro(r.get("paga")) * 1000
                 ganancia = cliente_paga - tu_pagas
+                nota = r.get("NOTA", "")
 
                 mensaje += (
                     f"- {r.get('cliente')}\n"
                     f"  Cliente paga: {formato_pesos(cliente_paga)}\n"
                     f"  Tú pagas: {formato_pesos(tu_pagas)}\n"
-                    f"  Ganancia: {formato_pesos(ganancia)}\n\n"
+                    f"  Ganancia: {formato_pesos(ganancia)}\n"
                 )
+                
+                if nota:
+                    mensaje += f"  Nota: {nota}\n"
+                
+                mensaje += "\n"
 
             # Dividir mensaje si es muy largo
             mensajes = dividir_mensaje(mensaje)
