@@ -153,6 +153,67 @@ def subir_a_s3(archivo_path, nombre_archivo):
     except Exception as e:
         return None
 
+def generar_cotizacion(nombre_cliente, mensualidad):
+    """Genera cotización en PDF usando LaTeX"""
+    try:
+        tz = pytz.timezone("America/Bogota")
+        fecha_actual = datetime.now(tz).strftime("%d de %B de %Y")
+        fecha_vencimiento = (datetime.now(tz) + timedelta(days=30)).strftime("%d de %B de %Y")
+        
+        # Traducir mes a español
+        meses = {
+            'January': 'enero', 'February': 'febrero', 'March': 'marzo',
+            'April': 'abril', 'May': 'mayo', 'June': 'junio',
+            'July': 'julio', 'August': 'agosto', 'September': 'septiembre',
+            'October': 'octubre', 'November': 'noviembre', 'December': 'diciembre'
+        }
+        for eng, esp in meses.items():
+            fecha_actual = fecha_actual.replace(eng, esp)
+            fecha_vencimiento = fecha_vencimiento.replace(eng, esp)
+        
+        # Formatear mensualidad
+        mensualidad_formateada = f"{mensualidad:,}".replace(",", ".")
+        
+        # Leer plantilla
+        with open("cotizacion_template.tex", "r") as f:
+            contenido = f.read()
+        
+        # Reemplazar variables
+        contenido = contenido.replace("{{FECHA}}", fecha_actual)
+        contenido = contenido.replace("{{FECHA_VENCIMIENTO}}", fecha_vencimiento)
+        contenido = contenido.replace("{{CLIENTE}}", nombre_cliente)
+        contenido = contenido.replace("{{MENSUALIDAD}}", mensualidad_formateada)
+        
+        # Crear archivo temporal
+        numero_cot = obtener_siguiente_numero()
+        nombre_base = f"cotizacion_{numero_cot:03d}"
+        tex_path = f"{nombre_base}.tex"
+        
+        with open(tex_path, "w") as f:
+            f.write(contenido)
+        
+        # Compilar con XeLaTeX
+        result = subprocess.run(
+            ["xelatex", "-interaction=nonstopmode", tex_path],
+            capture_output=True,
+            timeout=30
+        )
+        
+        pdf_path = f"{nombre_base}.pdf"
+        if os.path.exists(pdf_path):
+            # Limpiar archivos auxiliares
+            for ext in ['.aux', '.log', '.tex']:
+                try:
+                    os.remove(f"{nombre_base}{ext}")
+                except:
+                    pass
+            return pdf_path, f"COT-{numero_cot:03d}"
+        else:
+            return None, "Error compilando LaTeX"
+            
+    except Exception as e:
+        return None, str(e)
+
 # ================= ROUTE =================
 @app.route("/whatsapp", methods=["POST"])
 def whatsapp():
@@ -528,6 +589,39 @@ def whatsapp():
                 resp.message(f"❌ No se encontró ningún cliente con ese serial")
                 return str(resp)
 
+        # ================= GENERAR COTIZACION =================
+        if body.startswith("cotizacion "):
+            partes = body.replace("cotizacion ", "").strip().rsplit(" ", 1)
+            
+            if len(partes) < 2:
+                resp.message("❌ Formato: cotizacion [nombre] [mensualidad]\nEjemplo: cotizacion Juan Perez 250000")
+                return str(resp)
+            
+            nombre_cliente = partes[0].strip()
+            try:
+                mensualidad = int(partes[1].strip())
+            except:
+                resp.message("❌ La mensualidad debe ser un número\nEjemplo: cotizacion Juan Perez 250000")
+                return str(resp)
+            
+            try:
+                pdf_path, numero_cot = generar_cotizacion(nombre_cliente, mensualidad)
+                if pdf_path:
+                    url_descarga = subir_a_s3(pdf_path, os.path.basename(pdf_path))
+                    if url_descarga:
+                        resp.message(f"✅ Cotización {numero_cot} generada para {nombre_cliente}\n💰 Mensualidad: {formato_pesos(mensualidad)}\n📄 Descargar: {url_descarga}")
+                        try:
+                            os.remove(pdf_path)
+                        except:
+                            pass
+                    else:
+                        resp.message(f"✅ Cotización {numero_cot} generada pero error subiendo a S3")
+                else:
+                    resp.message(f"❌ Error generando cotización: {numero_cot}")
+            except Exception as e:
+                resp.message(f"❌ Error: {str(e)}")
+            return str(resp)
+
         # ================= AYUDA =================
         resp.message(
             "🤖 *Comandos disponibles:*\n"
@@ -537,6 +631,7 @@ def whatsapp():
             "- proximos pagos\n"
             "- cuanto debe [nombre] (ej: cuanto debe juanes)\n"
             "- factura [nombre] (ej: factura juanes)\n"
+            "- cotizacion [nombre] [mensualidad] (ej: cotizacion Juan Perez 250000)\n"
             "- [nombre] pago (ej: juanes pago)\n"
             "- [serial] (ej: stk-392020-xx)"
         )

@@ -1,0 +1,91 @@
+\documentclass[11pt, a4paper]{article}
+
+\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2cm, right=2cm]{geometry}
+\usepackage{fontspec}
+\usepackage[spanish]{babel}
+\setmainfont{DejaVu Sans}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{titlesec}
+
+\definecolor{primary}{RGB}{0, 51, 102}
+\definecolor{accent}{RGB}{200, 200, 200}
+
+\titleformat{\section}{\Large\bfseries\color{primary}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\large\bfseries\color{primary}}{}{0em}{}
+
+\renewcommand{\labelitemi}{-}
+
+\begin{document}
+
+\begin{minipage}{0.6\textwidth}
+    {\Huge \textbf{\color{primary}ÓRBITA NET}}\\[0.2cm]
+    {\large Raúl Orlas Parra}\\[0.2cm]
+    \textbf{Ubicación:} El Pueblito Paisa, Colombia\\
+    \textbf{Fecha:} {{FECHA}}
+\end{minipage}
+\hfill
+\begin{minipage}{0.35\textwidth}
+    \begin{flushright}
+        \Huge \color{gray!50} COTIZACIÓN
+    \end{flushright}
+\end{minipage}
+
+\vspace{1cm}
+
+\section*{Estimado {{CLIENTE}}}
+A continuación, se detalla la cotización solicitada para la adquisición e instalación de una antena mini portátil con servicio de internet ilimitado de 250 MB. Esta propuesta incluye los componentes recomendados para una configuración óptima y una conexión estable.
+
+\vspace{0.5cm}
+
+\section*{Detalle de Costos de Inversión Inicial}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{p{0.6\textwidth} r}
+    \toprule
+    \textbf{Descripción} & \textbf{Valor (COP)} \\
+    \midrule
+    \textbf{Antena Mini Portátil} \newline \small{Dispositivo portátil con capacidad para internet ilimitado de 250 MB.} & 1.200.000 \\
+    
+    \textbf{Cable de 10 metros} \newline \small{Para conexión eficiente entre antena y router.} & 112.000 \\
+    
+    \textbf{Router} \newline \small{Dispositivo para distribución de señal WiFi.} & 150.000 \\
+    
+    \textbf{Servicio de Instalación} \newline \small{Programable para día sábado (sujeto a disponibilidad).} & 160.000 \\
+    \midrule
+    \textbf{\large Total Inversión Inicial} & \textbf{\large 1.622.000} \\
+    \bottomrule
+\end{tabular}
+
+\vspace{1cm}
+
+\section*{Costos Recurrentes (Mensualidad)}
+\begin{tabular}{p{0.6\textwidth} r}
+    \toprule
+    \textbf{Concepto} & \textbf{Valor (COP)} \\
+    \midrule
+    \textbf{Servicio de Internet Ilimitado (250 MB)} & \textbf{{{MENSUALIDAD}}} \\
+    \small{Facturación mensual.} & \\
+    \bottomrule
+\end{tabular}
+
+\vspace{1cm}
+
+\section*{Términos y Condiciones}
+\begin{itemize}
+    \item \textbf{Validez de la oferta:} Esta cotización es válida por 30 días calendario a partir de la fecha de emisión (hasta el {{FECHA_VENCIMIENTO}}).
+    \item \textbf{Impuestos:} Los precios no incluyen IVA ni otros impuestos aplicables, los cuales se calcularán según la normativa vigente en Colombia al momento de la facturación.
+    \item \textbf{Disponibilidad:} La instalación está sujeta a agenda; se recomienda confirmar con antelación.
+\end{itemize}
+
+\vspace{1.5cm}
+
+\begin{center}
+    \textit{Agradecemos su interés en nuestros servicios y estamos a su disposición para cualquier aclaración o para proceder con el agendamiento.}\\
+    \vspace{1cm}
+    \textbf{Atentamente,}\\
+    \vspace{0.5cm}
+    Órbita Net
+\end{center}
+
+\end{document}
