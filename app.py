@@ -277,7 +277,6 @@ def whatsapp():
                 if r.get("cliente")
                 and r.get("vence")
                 and numero_seguro(r.get("vence")) in dias_a_revisar
-                and not esta_al_dia(r.get("aldia"))
             ]
 
             if not proximos:
@@ -290,9 +289,11 @@ def whatsapp():
                 dia_vence = numero_seguro(r.get("vence"))
                 cliente_paga = numero_seguro(r.get("clientepaga")) * 1000
                 nota = r.get("NOTA", "")
+                al_dia = esta_al_dia(r.get("aldia"))
+                estado = "✅ Al día" if al_dia else "❌ Debe"
                 
                 mensaje += (
-                    f"- {r.get('cliente')}\n"
+                    f"- {r.get('cliente')} ({estado})\n"
                     f"  Vence: día {dia_vence}\n"
                     f"  Monto: {formato_pesos(cliente_paga)}\n"
                 )
