@@ -264,11 +264,11 @@ def whatsapp():
 
         # ================= PROXIMOS PAGOS =================
         if body == "proximos pagos":
-            # Obtener fecha actual y próximos 3 días (incluyendo hoy)
+            # Obtener fecha actual y próximos 4 días (hoy + 4 días más = 5 días total)
             fecha_actual = datetime.now(tz)
             dias_a_revisar = []
             
-            for i in range(4):  # Hoy + 3 días = 4 días
+            for i in range(5):  # Hoy + 4 días = 5 días
                 fecha = fecha_actual + timedelta(days=i)
                 dias_a_revisar.append(fecha.day)
             
@@ -281,10 +281,10 @@ def whatsapp():
             ]
 
             if not proximos:
-                resp.message("✅ No hay pagos pendientes en los próximos 3 días.")
+                resp.message("✅ No hay pagos pendientes en los próximos 5 días.")
                 return str(resp)
 
-            mensaje = "⏰ *Pagos próximos (3 días):*\n\n"
+            mensaje = "⏰ *Pagos próximos (5 días):*\n\n"
 
             for r in proximos:
                 dia_vence = numero_seguro(r.get("vence"))
