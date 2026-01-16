@@ -86,7 +86,14 @@ def generar_factura_cliente(cliente_data):
         # Datos para la factura
         fecha_actual = datetime.now(pytz.timezone("America/Bogota")).strftime("%d/%m/%Y")
         numero_factura = f"FAC-{obtener_siguiente_numero():03d}"
-        monto = numero_seguro(cliente_data.get("clientepaga")) * 1000
+        cliente_paga = numero_seguro(cliente_data.get("clientepaga"))
+        monto = cliente_paga * 1000
+        
+        # Determinar plan según monto
+        plan = "ITINERANTE" if cliente_paga >= 415 else "RESIDENCIAL"
+        
+        # Obtener serial de antena
+        serial_antena = cliente_data.get("serial_antena", "").strip() or "N/A"
         
         # Cargar plantilla
         doc = Document("FACTURA MARAVILLA (4).docx")
@@ -111,7 +118,7 @@ def generar_factura_cliente(cliente_data):
                         }
                         mes_ingles = datetime.now().strftime("%B")
                         mes_espanol = meses.get(mes_ingles, mes_ingles.upper())
-                        cell.text = f"SERVICIO ANTENA PERIODO {mes_espanol}"
+                        cell.text = f"SERVICIO ANTENA {mes_espanol} - SERIAL: {serial_antena} - PLAN: {plan}"
                     if "$450,000" in cell.text:
                         cell.text = cell.text.replace("$450,000", formato_pesos(monto))
 
