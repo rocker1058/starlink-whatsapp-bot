@@ -160,7 +160,7 @@ def subir_a_s3(archivo_path, nombre_archivo):
     except Exception as e:
         return None
 
-def generar_cotizacion(nombre_cliente, precio_antena, mensualidad):
+def generar_cotizacion(nombre_cliente, precio_antena, mensualidad, vendedor, ubicacion):
     """Genera cotización en PDF usando LaTeX"""
     try:
         tz = pytz.timezone("America/Bogota")
@@ -201,6 +201,8 @@ def generar_cotizacion(nombre_cliente, precio_antena, mensualidad):
         contenido = contenido.replace("{{MENSUALIDAD}}", mensualidad_formateada)
         contenido = contenido.replace("{{VELOCIDAD}}", velocidad)
         contenido = contenido.replace("{{TOTAL_INICIAL}}", total_inicial_formateado)
+        contenido = contenido.replace("{{VENDEDOR}}", vendedor)
+        contenido = contenido.replace("{{UBICACION}}", ubicacion)
         
         # Crear archivo temporal
         numero_cot = obtener_siguiente_numero()
@@ -630,20 +632,23 @@ def whatsapp():
         if body.startswith("cotizacion "):
             partes = body.replace("cotizacion ", "").strip().split()
             
-            if len(partes) < 3:
-                resp.message("❌ Formato: cotizacion [nombre] [precio_antena] [mensualidad]\nEjemplo: cotizacion Juan 1200000 250000")
+            if len(partes) < 5:
+                resp.message("❌ Formato: cotizacion [cliente] [precio_antena] [mensualidad] [vendedor] [ubicacion]\nEjemplo: cotizacion Juan 1200000 250000 Raul Medellin")
                 return str(resp)
             
-            nombre_cliente = " ".join(partes[:-2])
+            nombre_cliente = partes[0]
             try:
-                precio_antena = int(partes[-2])
-                mensualidad = int(partes[-1])
+                precio_antena = int(partes[1])
+                mensualidad = int(partes[2])
             except:
-                resp.message("❌ El precio de antena y mensualidad deben ser números\nEjemplo: cotizacion Juan Perez 1200000 250000")
+                resp.message("❌ El precio de antena y mensualidad deben ser números\nEjemplo: cotizacion Juan 1200000 250000 Raul Medellin")
                 return str(resp)
             
+            vendedor = partes[3]
+            ubicacion = " ".join(partes[4:])
+            
             try:
-                pdf_path, numero_cot = generar_cotizacion(nombre_cliente, precio_antena, mensualidad)
+                pdf_path, numero_cot = generar_cotizacion(nombre_cliente, precio_antena, mensualidad, vendedor, ubicacion)
                 if pdf_path:
                     url_descarga = subir_a_s3(pdf_path, os.path.basename(pdf_path))
                     if url_descarga:
