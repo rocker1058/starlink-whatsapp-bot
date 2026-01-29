@@ -160,7 +160,7 @@ def subir_a_s3(archivo_path, nombre_archivo):
     except Exception as e:
         return None
 
-def generar_cotizacion(nombre_cliente, mensualidad):
+def generar_cotizacion(nombre_cliente, precio_antena, mensualidad):
     """Genera cotización en PDF usando LaTeX"""
     try:
         tz = pytz.timezone("America/Bogota")
@@ -178,8 +178,16 @@ def generar_cotizacion(nombre_cliente, mensualidad):
             fecha_actual = fecha_actual.replace(eng, esp)
             fecha_vencimiento = fecha_vencimiento.replace(eng, esp)
         
-        # Formatear mensualidad
+        # Determinar velocidad según mensualidad
+        velocidad = "250 MB" if mensualidad < 300000 else "300 MB"
+        
+        # Calcular total inversión inicial
+        total_inicial = precio_antena + 112000 + 150000 + 160000
+        
+        # Formatear valores
+        precio_antena_formateado = f"{precio_antena:,}".replace(",", ".")
         mensualidad_formateada = f"{mensualidad:,}".replace(",", ".")
+        total_inicial_formateado = f"{total_inicial:,}".replace(",", ".")
         
         # Leer plantilla
         with open("cotizacion_template.tex", "r") as f:
@@ -189,7 +197,10 @@ def generar_cotizacion(nombre_cliente, mensualidad):
         contenido = contenido.replace("{{FECHA}}", fecha_actual)
         contenido = contenido.replace("{{FECHA_VENCIMIENTO}}", fecha_vencimiento)
         contenido = contenido.replace("{{CLIENTE}}", nombre_cliente)
+        contenido = contenido.replace("{{PRECIO_ANTENA}}", precio_antena_formateado)
         contenido = contenido.replace("{{MENSUALIDAD}}", mensualidad_formateada)
+        contenido = contenido.replace("{{VELOCIDAD}}", velocidad)
+        contenido = contenido.replace("{{TOTAL_INICIAL}}", total_inicial_formateado)
         
         # Crear archivo temporal
         numero_cot = obtener_siguiente_numero()
@@ -617,25 +628,26 @@ def whatsapp():
 
         # ================= GENERAR COTIZACION =================
         if body.startswith("cotizacion "):
-            partes = body.replace("cotizacion ", "").strip().rsplit(" ", 1)
+            partes = body.replace("cotizacion ", "").strip().split()
             
-            if len(partes) < 2:
-                resp.message("❌ Formato: cotizacion [nombre] [mensualidad]\nEjemplo: cotizacion Juan Perez 250000")
+            if len(partes) < 3:
+                resp.message("❌ Formato: cotizacion [nombre] [precio_antena] [mensualidad]\nEjemplo: cotizacion Juan 1200000 250000")
                 return str(resp)
             
-            nombre_cliente = partes[0].strip()
+            nombre_cliente = " ".join(partes[:-2])
             try:
-                mensualidad = int(partes[1].strip())
+                precio_antena = int(partes[-2])
+                mensualidad = int(partes[-1])
             except:
-                resp.message("❌ La mensualidad debe ser un número\nEjemplo: cotizacion Juan Perez 250000")
+                resp.message("❌ El precio de antena y mensualidad deben ser números\nEjemplo: cotizacion Juan Perez 1200000 250000")
                 return str(resp)
             
             try:
-                pdf_path, numero_cot = generar_cotizacion(nombre_cliente, mensualidad)
+                pdf_path, numero_cot = generar_cotizacion(nombre_cliente, precio_antena, mensualidad)
                 if pdf_path:
                     url_descarga = subir_a_s3(pdf_path, os.path.basename(pdf_path))
                     if url_descarga:
-                        resp.message(f"✅ Cotización {numero_cot} generada para {nombre_cliente}\n💰 Mensualidad: {formato_pesos(mensualidad)}\n📄 Descargar: {url_descarga}")
+                        resp.message(f"✅ Cotización {numero_cot} generada para {nombre_cliente}\n💰 Antena: {formato_pesos(precio_antena)}\n💰 Mensualidad: {formato_pesos(mensualidad)}\n📄 Descargar: {url_descarga}")
                         try:
                             os.remove(pdf_path)
                         except:
